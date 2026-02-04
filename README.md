@@ -119,18 +119,45 @@ Access the app at http://localhost:3000.
 
 ## CI (Jenkins)
 
-This repository includes a `Jenkinsfile` at the project root with support for both **local** and **Docker** builds:
+This repository includes a `Jenkinsfile` at the project root that builds the Vue application using npm.
 
-- **Local build**: Runs npm install/build using Node.js installed on the Jenkins agent
-- **Docker build**: Builds the Docker image on the Jenkins agent (requires Docker daemon access)
+### Prerequisites for Jenkins
 
-Use the `BUILD_TYPE` parameter to choose the build method when triggering the pipeline.
+The Jenkins agent running the pipeline **must have Node.js 20+ and npm installed** (see `engines` in `package.json`).
 
-To customize the pipeline:
+**To install Node.js on the Jenkins agent:**
 
-1. Update the Node version in the `tools` block (currently `node22`)
-2. Modify environment variables in the `environment` block
-3. Add credentials or artifact handling as needed for your Jenkins instance
+```bash
+# Option 1: Using a package manager (Linux)
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
+# Option 2: Using Homebrew (macOS)
+brew install node@22
+
+# Option 3: Download from nodejs.org
+# https://nodejs.org/en/download/
+```
+
+Verify installation on the Jenkins agent:
+
+```bash
+node --version  # Should be v20+
+npm --version   # Should be 9+
+```
+
+### Pipeline Flow
+
+1. **Checkout** — Clones the repository and logs the commit
+2. **Install Dependencies** — Runs `npm install`
+3. **Build** — Runs `npm run build` to generate the `dist/` folder
+4. **Post-Build** — Archives artifacts and reports status
+
+### Troubleshooting
+
+- **`npm: not found`** — Node.js is not installed on the Jenkins agent. Install it using the steps above.
+- **Build timeout** — Increase the timeout in `Jenkinsfile` options block (currently 30 minutes).
+- **Permission denied** — Ensure the Jenkins user has permission to write to the workspace.
 
 ## Project structure
 
@@ -139,7 +166,7 @@ To customize the pipeline:
 - `public/` — static assets
 - `Dockerfile` — Docker image definition
 - `docker-compose.yml` — Docker Compose configuration
-- `Jenkinsfile` — CI pipeline with local & Docker build options
+- `Jenkinsfile` — CI pipeline
 
 ## Contributing
 
