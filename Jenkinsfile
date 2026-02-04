@@ -35,15 +35,20 @@ pipeline {
             steps {
                                 // Prefer building inside Docker Compose when available so
                                 // the build environment is consistent with the Dockerfile.
-                                // Fall back to local build if Docker isn't available on agent.
+                                // If any docker/compose command fails (e.g. missing TLS certs),
+                                // fall back to a local `npm` build to keep the pipeline green.
                                 sh '''
 if command -v docker >/dev/null 2>&1; then
     docker --version
-    # Ensure compose file context is up-to-date
-    docker compose build --pull
-    # Run the build inside the container; the compose service mounts the
-    # workspace so `dist` will be written back to the Jenkins workspace.
-    docker compose run --rm app sh -c "npm ci && npm run build"
+    echo "Attempting: docker compose build --pull"
+    if docker compose build --pull; then
+        echo "docker compose build succeeded — running build inside container"
+        docker compose run --rm app sh -c "npm ci && npm run build"
+    else
+        echo "docker compose build failed — falling back to local npm build"
+        NODE_ENV=development npm ci
+        npm run build
+    fi
 else
     echo "Docker not found — falling back to local npm build"
     NODE_ENV=development npm ci
