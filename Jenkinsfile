@@ -1,7 +1,12 @@
 
 
 pipeline {
-    agent any
+    agent {
+        docker {
+            image 'node:22-alpine'
+            args '-v /var/run/docker.sock:/var/run/docker.sock'
+        }
+    }
 
     options {
         timeout(time: 30, unit: 'MINUTES')
@@ -21,12 +26,11 @@ pipeline {
 
         stage('Install & Build') {
             steps {
-                sh 'echo "Building with Docker container..."'
-                script {
-                    sh '''
-                        docker run --rm -v $PWD:/app -w /app node:22-alpine sh -c "npm install && npm run build"
-                    '''
-                }
+                sh 'echo "Installing dependencies..."'
+                sh 'npm install'
+                sh 'echo "Building application..."'
+                sh 'npm run build'
+                sh 'echo "Build completed"'
             }
         }
     }
@@ -38,9 +42,6 @@ pipeline {
         }
         failure {
             sh 'echo "❌ Build failed."'
-        }
-        always {
-            deleteDir()
         }
     }
 }
