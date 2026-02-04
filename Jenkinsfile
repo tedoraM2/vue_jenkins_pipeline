@@ -1,12 +1,7 @@
 
 
 pipeline {
-    agent {
-        docker {
-            image 'node:22-alpine'
-            args '-v /var/run/docker.sock:/var/run/docker.sock'
-        }
-    }
+    agent any
 
     options {
         timeout(time: 30, unit: 'MINUTES')
@@ -26,11 +21,13 @@ pipeline {
 
         stage('Install & Build') {
             steps {
-                sh 'echo "Installing dependencies..."'
-                sh 'npm install'
-                sh 'echo "Building application..."'
-                sh 'npm run build'
-                sh 'echo "Build completed"'
+                withDockerContainer(image: 'node:22-alpine') {
+                    sh 'echo "Installing dependencies..."'
+                    sh 'npm install'
+                    sh 'echo "Building application..."'
+                    sh 'npm run build'
+                    sh 'echo "Build completed"'
+                }
             }
         }
     }
