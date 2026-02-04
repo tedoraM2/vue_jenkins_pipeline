@@ -5,6 +5,7 @@ pipeline {
 
     options {
         timeout(time: 30, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '10'))
     }
 
     environment {
@@ -15,30 +16,32 @@ pipeline {
         stage('Checkout') {
             steps {
                 checkout scm
-                sh 'echo "Build started for Vue Jenkins Pipeline"'
+                sh 'git log --oneline -1'
             }
         }
 
-        stage('Install & Build') {
+        stage('Install Dependencies') {
             steps {
-                withDockerContainer(image: 'node:22-alpine') {
-                    sh 'echo "Installing dependencies..."'
-                    sh 'npm install'
-                    sh 'echo "Building application..."'
-                    sh 'npm run build'
-                    sh 'echo "Build completed"'
-                }
+                sh 'npm --version'
+                sh 'node --version'
+                sh 'npm install'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh 'npm run build'
             }
         }
     }
 
     post {
         success {
-            sh 'echo "✅ Build completed successfully!"'
+            echo '✅ Build completed successfully!'
             archiveArtifacts artifacts: 'dist/**', allowEmptyArchive: true
         }
         failure {
-            sh 'echo "❌ Build failed."'
+            echo '❌ Build failed.'
         }
     }
 }
