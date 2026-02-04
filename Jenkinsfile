@@ -4,74 +4,58 @@ pipeline {
     agent any
 
     options {
-        timestamps()
         timeout(time: 30, unit: 'MINUTES')
     }
 
     environment {
         NODE_ENV = 'production'
         DOCKER_BUILDKIT = '1'
-    }
-
-    parameters {
-        choice(name: 'BUILD_TYPE', choices: ['local', 'docker'], description: 'Build using local Node or Docker')
+        IMAGE_NAME = 'vue-jenkins-pipeline'
     }
 
     stages {
         stage('Checkout') {
             steps {
                 checkout scm
-                script {
-                    echo "📦 Building with: ${params.BUILD_TYPE}"
-                }
+                sh 'echo "Build started for Vue Jenkins Pipeline"'
             }
         }
 
-        stage('Build Local') {
-            when {
-                expression { params.BUILD_TYPE == 'local' }
-            }
-            tools {
-                nodejs 'node22'
-            }
+        stage('Build Docker Image') {
             steps {
-                echo '🔨 Building with local Node'
-                sh 'npm install'
-                sh 'npm run build'
+                sh 'echo "Building Docker image..."'
+                sh 'docker build -t ${IMAGE_NAME}:${BUILD_NUMBER} .'
+                sh 'docker build -t ${IMAGE_NAME}:latest .'
+                sh 'echo "Docker image built: ${IMAGE_NAME}:${BUILD_NUMBER}"'
             }
         }
 
-        stage('Build Docker') {
-            when {
-                expression { params.BUILD_TYPE == 'docker' }
-            }
+        stage('Test Build') {
             steps {
-                echo '🐳 Building with Docker'
-                script {
-                    sh 'docker build -t vue-jenkins-pipeline:${BUILD_NUMBER} .'
-                    sh 'docker build -t vue-jenkins-pipeline:latest .'
-                }
-            }
-        }
-
-        stage('Test') {
-            when {
-                expression { params.BUILD_TYPE == 'local' }
-            }
-            steps {
-                echo '✅ Running tests'
-                sh 'npm test || true'
+                sh 'echo "Testing Docker image..."'
+                sh '''
+                    CONTAINER_ID=$(docker run -d -p 3002:3000 ${IMAGE_NAME}:${BUILD_NUMBER})
+                    sleep 3
+                    STATUS=$(curl -s http://localhost:3002 | wc -l)
+                    if [ "$STATUS" -gt 0 ]; then
+                        echo "✅ Container is responding"
+                    else
+                        echo "❌ Container health check failed"
+                        exit 1
+                    fi
+                    docker kill $CONTAINER_ID || true
+                '''
             }
         }
     }
 
     post {
         success {
-            echo '✅ Build completed successfully!'
+            sh 'echo "✅ Build completed successfully!"'
             archiveArtifacts artifacts: 'dist/**', allowEmptyArchive: true
         }
         failure {
-            echo '❌ Build failed.'
+            sh 'echo "❌ Build failed."'
         }
         always {
             cleanWs()
