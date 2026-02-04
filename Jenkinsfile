@@ -58,7 +58,7 @@ pipeline {
             sh 'echo "❌ Build failed."'
         }
         always {
-            cleanWs()
+            deleteDir()
         }
     }
 }
