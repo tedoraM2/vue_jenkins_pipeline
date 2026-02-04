@@ -19,18 +19,14 @@ pipeline {
             }
         }
 
-        stage('Install Dependencies') {
+        stage('Install & Build') {
             steps {
-                sh 'echo "Installing dependencies..."'
-                sh 'npm install'
-            }
-        }
-
-        stage('Build') {
-            steps {
-                sh 'echo "Building application..."'
-                sh 'npm run build'
-                sh 'echo "Build completed"'
+                sh 'echo "Building with Docker container..."'
+                script {
+                    sh '''
+                        docker run --rm -v $PWD:/app -w /app node:22-alpine sh -c "npm install && npm run build"
+                    '''
+                }
             }
         }
     }
