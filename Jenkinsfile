@@ -24,7 +24,10 @@ pipeline {
             steps {
                 sh 'npm --version'
                 sh 'node --version'
-                sh 'npm install'
+                // Ensure devDependencies (like `vite`) are installed even though
+                // pipeline global NODE_ENV is set to 'production'. Use npm ci
+                // with NODE_ENV overridden to development for reproducible installs.
+                sh 'NODE_ENV=development npm ci'
             }
         }
 
